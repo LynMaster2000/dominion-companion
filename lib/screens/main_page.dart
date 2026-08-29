@@ -22,6 +22,10 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int selectedIndex = 0;
+  final GlobalKey<SavedSetsPageState> savedSetsKey =
+    GlobalKey<SavedSetsPageState>();
+  final GlobalKey<NavigatorState> savedSetsNavigatorKey =
+    GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +43,11 @@ class _MainPageState extends State<MainPage> {
           ),
 
           Navigator(
+            key: savedSetsNavigatorKey,
             onGenerateRoute: (settings) {
               return MaterialPageRoute(
                 builder: (context) => SavedSetsPage(
+                  key: savedSetsKey,
                   cards: widget.cards,
                 ),
               );
@@ -52,9 +58,22 @@ class _MainPageState extends State<MainPage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
+          if (index == 2 && selectedIndex == 2) {
+            savedSetsNavigatorKey.currentState?.popUntil(
+              (route) => route.isFirst,
+            );
+
+            savedSetsKey.currentState?.refreshSets();
+            return;
+          }
+
           setState(() {
             selectedIndex = index;
           });
+
+          if (index == 2) {
+            savedSetsKey.currentState?.refreshSets();
+          }
         },
         destinations: const [
           NavigationDestination(

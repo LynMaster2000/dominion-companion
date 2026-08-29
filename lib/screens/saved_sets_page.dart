@@ -14,10 +14,10 @@ class SavedSetsPage extends StatefulWidget {
   });
 
   @override
-  State<SavedSetsPage> createState() => _SavedSetsPageState();
+  State<SavedSetsPage> createState() => SavedSetsPageState();
 }
 
-class _SavedSetsPageState extends State<SavedSetsPage> {
+class SavedSetsPageState extends State<SavedSetsPage> {
   final SavedSetRepository repository = SavedSetRepository();
 
   List<SavedSet> savedSets = [];
@@ -27,6 +27,75 @@ class _SavedSetsPageState extends State<SavedSetsPage> {
   void initState() {
     super.initState();
     loadSets();
+  }
+
+  Future<void> refreshSets() async {
+    await loadSets();
+  }
+
+  Future<void> createNewSet() async {
+    final controller = TextEditingController();
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('New Set'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Set name',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = controller.text.trim();
+
+                if (name.isNotEmpty) {
+                  Navigator.pop(context, name);
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (name == null) return;
+
+    final newSet = SavedSet(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      kingdomCardIds: [],
+      extras: [],
+    );
+
+    final sets = await repository.loadSets();
+    sets.add(newSet);
+    await repository.saveSets(sets);
+
+    if (!mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SavedSetDetailPage(
+          savedSet: newSet,
+          allCards: widget.cards,
+        ),
+      ),
+    );
+
+    await refreshSets();
   }
 
   Future<void> loadSets() async {
@@ -131,6 +200,11 @@ class _SavedSetsPageState extends State<SavedSetsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Saved Sets'),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: createNewSet,
+        icon: const Icon(Icons.add),
+        label: const Text('New Set'),
       ),
       body: loading
           ? const Center(

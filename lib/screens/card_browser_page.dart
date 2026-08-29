@@ -4,13 +4,18 @@ import '../models/dominion_card.dart';
 import '../data/saved_sets_repository.dart';
 import '../models/saved_set.dart';
 import '../models/card_sort.dart';
+import '../widgets/card_info_dialog.dart';
 
 class CardBrowserPage extends StatefulWidget {
   final List<DominionCard> cards;
+  final SavedSet? targetSet;
+  final String? replaceCardId;
 
   const CardBrowserPage({
     super.key,
     required this.cards,
+    this.targetSet,
+    this.replaceCardId,
   });
 
   @override
@@ -20,20 +25,84 @@ class CardBrowserPage extends StatefulWidget {
 class _CardBrowserPageState extends State<CardBrowserPage> {
   String searchText = '';
   CardSort selectedSort = CardSort.alphabetical;
+  String? selectedExpansion;
+  String? selectedType;
+  int? selectedCost;
   
-
   Future<void> addCardToSavedSet(DominionCard card) async {
     final repository = SavedSetRepository();
     final savedSets = await repository.loadSets();
 
     if (!mounted) return;
 
-    if (savedSets.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You have no saved sets yet.'),
-        ),
+    if (widget.targetSet != null) {
+      final targetSet = widget.targetSet!;
+
+      final index = savedSets.indexWhere(
+        (set) => set.id == targetSet.id,
       );
+
+      if (index != -1) {
+        savedSets[index] = targetSet;
+      }
+
+      if (widget.replaceCardId != null) {
+        final replaceIndex = targetSet.kingdomCardIds.indexOf(
+          widget.replaceCardId!,
+        );
+
+        if (replaceIndex == -1) {
+          return;
+        }
+
+        if (targetSet.kingdomCardIds.contains(card.id)) {
+          final messenger = ScaffoldMessenger.of(context);
+
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${card.name} is already in ${targetSet.name}.',
+                ),
+              ),
+            );
+
+          return;
+        }
+
+        targetSet.kingdomCardIds[replaceIndex] = card.id;
+
+        await repository.saveSets(savedSets);
+
+        if (!mounted) return;
+
+        Navigator.pop(context, true);
+        return;
+      }
+
+      await addCardToSet(
+        card,
+        targetSet,
+        savedSets,
+        repository,
+      );
+
+      return;
+    }
+
+    if (savedSets.isEmpty) {
+      final messenger = ScaffoldMessenger.of(context);
+
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'You have no saved sets yet.',
+            ),
+          ),
+        );
       return;
     }
 
@@ -80,11 +149,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
       if (alreadyAdded) {
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${card.name} is already in ${set.name}.'),
-          ),
-        );
+        final messenger = ScaffoldMessenger.of(context);
+
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                '${card.name} is already in ${set.name}.',
+              ),
+            ),
+          );
 
         return;
       }
@@ -99,13 +174,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Added ${card.name} to ${set.name} as an extra.',
+      final messenger = ScaffoldMessenger.of(context);
+
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Added ${card.name} to ${set.name} as an extra.',
+            ),
           ),
-        ),
-      );
+        );
 
       return;
     }
@@ -115,11 +194,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
     if (set.kingdomCardIds.contains(card.id)) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${card.name} is already in ${set.name}.'),
-        ),
-      );
+      final messenger = ScaffoldMessenger.of(context);
+
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              '${card.name} is already in ${set.name}.',
+            ),
+          ),
+        );
 
       return;
     }
@@ -131,13 +216,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Added ${card.name} to ${set.name}.',
+      final messenger = ScaffoldMessenger.of(context);
+
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Added ${card.name} to ${set.name}.',
+            ),
           ),
-        ),
-      );
+        );
 
       return;
     }
@@ -192,25 +281,65 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Added ${newCard.name} to ${set.name}.',
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added ${newCard.name} to ${set.name}.',
+          ),
         ),
-      ),
-    );
+      );
   }
 
   @override
   Widget build(BuildContext context) {
+    final expansions = widget.cards
+        .map((card) => card.set)
+        .toSet()
+        .toList()
+      ..sort();
+
+    final types = widget.cards
+        .expand((card) => card.types)
+        .toSet()
+        .toList()
+      ..sort();
+
+    final costs = widget.cards
+        .map((card) => card.cost.coins)
+        .toSet()
+        .toList()
+      ..sort();
+      
     final filteredCards = widget.cards.where((card) {
       final search = searchText.toLowerCase();
 
-      return card.name.toLowerCase().contains(search) ||
+      final matchesSearch =
+          card.name.toLowerCase().contains(search) ||
           card.set.toLowerCase().contains(search) ||
           card.types.any(
             (type) => type.toLowerCase().contains(search),
           );
+
+      final matchesExpansion =
+          selectedExpansion == null ||
+          card.set == selectedExpansion;
+
+      final matchesType =
+          selectedType == null ||
+          card.types.contains(selectedType);
+
+      final matchesCost =
+          selectedCost == null ||
+          card.cost.coins == selectedCost;
+
+      return matchesSearch &&
+          matchesExpansion &&
+          matchesType &&
+          matchesCost;
     }).toList();
 
     sortCards(
@@ -220,7 +349,11 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Card Browser'),
+        title: Text(
+          widget.targetSet == null
+              ? 'Card Browser'
+              : 'Add Cards',
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -240,7 +373,86 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
               },
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  DropdownButton<String?>(
+                    value: selectedExpansion,
+                    hint: const Text('Expansion'),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All expansions'),
+                      ),
+                      ...expansions.map(
+                        (expansion) => DropdownMenuItem<String?>(
+                          value: expansion,
+                          child: Text(expansion),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedExpansion = value;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  DropdownButton<String?>(
+                    value: selectedType,
+                    hint: const Text('Type'),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All types'),
+                      ),
+                      ...types.map(
+                        (type) => DropdownMenuItem<String?>(
+                          value: type,
+                          child: Text(type),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedType = value;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  DropdownButton<int?>(
+                    value: selectedCost,
+                    hint: const Text('Cost'),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('All costs'),
+                      ),
+                      ...costs.map(
+                        (cost) => DropdownMenuItem<int?>(
+                          value: cost,
+                          child: Text('\$$cost'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCost = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
 
             DropdownButton<CardSort>(
               value: selectedSort,
@@ -287,53 +499,29 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
                 itemBuilder: (context, index) {
                   final card = filteredCards[index];
 
-                  return Tooltip(
-                    message: card.instructions,
-                    waitDuration: const Duration(milliseconds: 500),
-                    constraints: const BoxConstraints(
-                      maxWidth: 350,
-                    ),
-
-                    padding: const EdgeInsets.all(16),
-
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.grey,
-                        width: 1,
+                  return Card(
+                    child: ListTile(
+                      onTap: () {
+                        showCardInfoDialog(context, card);
+                      },
+                      title: Text(card.name),
+                      subtitle: Text(
+                        '${card.types.join(' • ')}\n${card.set}',
                       ),
-                    ),
-
-                    textStyle: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                    ),
-
-                    child: Card(
-                      child: ListTile(
-                        title: Text(card.name),
-                        subtitle: Text(
-                          '${card.set} • ${card.types.join(", ")}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(card.cost.toString()),
-
-                            const SizedBox(width: 8),
-
-                            IconButton(
-                              icon: const Icon(Icons.add),
-                              tooltip: 'Add to saved set',
-                              onPressed: () {
-                                addCardToSavedSet(card);
-                              },
-                            ),
-                          ],
-                        ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(card.cost.toString()),
+                          IconButton(
+                            tooltip: 'Add to saved set',
+                            icon: const Icon(Icons.add),
+                            onPressed: () {
+                              addCardToSavedSet(card);
+                            },
+                          ),
+                        ],
                       ),
-                    ),
+                    )
                   );
                 },
               ),

@@ -4,6 +4,7 @@ import '../models/dominion_card.dart';
 import '../models/saved_set.dart';
 import '../data/saved_sets_repository.dart';
 import '../models/card_sort.dart';
+import 'card_browser_page.dart';
 
 class SavedSetDetailPage extends StatefulWidget {
   final SavedSet savedSet;
@@ -24,6 +25,41 @@ class _SavedSetDetailPageState
     extends State<SavedSetDetailPage> {
 
   CardSort selectedSort = CardSort.alphabetical;
+
+  Future<void> replaceCard(DominionCard card) async {
+    final replaced = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CardBrowserPage(
+          cards: widget.allCards,
+          targetSet: widget.savedSet,
+          replaceCardId: card.id,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (replaced == true) {
+      setState(() {});
+    }
+  }
+
+  Future<void> openCardBrowser() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CardBrowserPage(
+          cards: widget.allCards,
+          targetSet: widget.savedSet,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
 
   Future<void> removeCard(DominionCard card) async {
     setState(() {
@@ -109,6 +145,14 @@ class _SavedSetDetailPageState
         )
         .toList();
 
+    final extraCards = widget.savedSet.extras
+      .map(
+        (extra) => widget.allCards.firstWhere(
+          (card) => card.id == extra.cardId,
+        ),
+      )
+      .toList();
+
     sortCards(
       kingdomCards,
       selectedSort,
@@ -116,63 +160,97 @@ class _SavedSetDetailPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Text(widget.savedSet.name),
-
-            const SizedBox(width: 8),
-
-            IconButton(
-              icon: const Icon(Icons.edit),
-              tooltip: 'Rename',
-              onPressed: renameSet,
-            ),
-          ],
-        ),
+        title: Text(widget.savedSet.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Rename set',
+            onPressed: renameSet,
+          ),
+        ],
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              8,
+            ),
+            child: Column(
               children: [
-                const Text('Sort by:'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Kingdom',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                    Text(
+                      '${kingdomCards.length}/10',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
 
-                const SizedBox(width: 12),
+                const SizedBox(height: 8),
 
-                DropdownButton<CardSort>(
-                  value: selectedSort,
-                  onChanged: (value) {
-                    if (value == null) return;
+                Row(
+                  children: [
+                    const Text('Sort:'),
 
-                    setState(() {
-                      selectedSort = value;
-                    });
-                  },
-                  items: const [
-                    DropdownMenuItem(
-                      value: CardSort.alphabetical,
-                      child: Text('Alphabetical A-Z'),
-                    ),
-                    DropdownMenuItem(
-                      value: CardSort.alphabeticalReverse,
-                      child: Text('Alphabetical Z-A'),
-                    ),
-                    DropdownMenuItem(
-                      value: CardSort.costLowHigh,
-                      child: Text('Cost: Low to High'),
-                    ),
-                    DropdownMenuItem(
-                      value: CardSort.costHighLow,
-                      child: Text('Cost: High to Low'),
-                    ),
-                    DropdownMenuItem(
-                      value: CardSort.expansion,
-                      child: Text('Expansion'),
-                    ),
-                    DropdownMenuItem(
-                      value: CardSort.type,
-                      child: Text('Type'),
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: DropdownButton<CardSort>(
+                        value: selectedSort,
+                        isExpanded: true,
+                        onChanged: (value) {
+                          if (value == null) return;
+
+                          setState(() {
+                            selectedSort = value;
+                          });
+                        },
+                        items: const [
+                          DropdownMenuItem(
+                            value: CardSort.alphabetical,
+                            child: Text('Alphabetical A-Z'),
+                          ),
+                          DropdownMenuItem(
+                            value: CardSort.alphabeticalReverse,
+                            child: Text('Alphabetical Z-A'),
+                          ),
+                          DropdownMenuItem(
+                            value: CardSort.costLowHigh,
+                            child: Text('Cost: Low to High'),
+                          ),
+                          DropdownMenuItem(
+                            value: CardSort.costHighLow,
+                            child: Text('Cost: High to Low'),
+                          ),
+                          DropdownMenuItem(
+                            value: CardSort.expansion,
+                            child: Text('Expansion'),
+                          ),
+                          DropdownMenuItem(
+                            value: CardSort.type,
+                            child: Text('Type'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -180,28 +258,204 @@ class _SavedSetDetailPageState
             ),
           ),
 
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-              ),
-              itemCount: kingdomCards.length,
-              itemBuilder: (context, index) {
-                final card = kingdomCards[index];
+          const Divider(height: 1),
 
-                // your existing card widget
-                return Card(
-                  child: ListTile(
-                    title: Text(card.name),
-                    subtitle: Text(
-                      '${card.set} • ${card.types.join(", ")}',
-                    ),
-                    trailing: Text(
-                      card.cost.toString(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    mainAxisExtent: 170,
+                  ),
+                    itemCount: 10,
+                    itemBuilder: (context, index) {
+                      if (index >= kingdomCards.length) {
+                        return Card(
+                          elevation: 0,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.45),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: openCardBrowser,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.add_circle_outline,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outline,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Add card',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final card = kingdomCards[index];
+
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                card.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              Text(
+                                card.types.join(' • '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+
+                              const Spacer(),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      card.set,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ),
+                                  Text(
+                                    card.cost.toString(),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: 'Replace card',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 32,
+                                        minHeight: 32,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.swap_horiz,
+                                        size: 18,
+                                      ),
+                                      onPressed: () {
+                                        replaceCard(card);
+                                      },
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Remove card',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 32,
+                                        minHeight: 32,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.close,
+                                        size: 18,
+                                      ),
+                                      onPressed: () {
+                                        removeCard(card);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                if (extraCards.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+
+                  Text(
+                    'Extras',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  ...extraCards.map(
+                    (card) => Card(
+                      child: ListTile(
+                        title: Text(card.name),
+                        subtitle: Text(
+                          '${card.types.join(' • ')}\n${card.set}',
+                        ),
+                        trailing: Text(card.cost.toString()),
+                      ),
                     ),
                   ),
-                );
-              },
+                ],
+              ],
+            ),
+          ),
+
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: openCardBrowser,
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    kingdomCards.length >= 10
+                        ? 'Add New Cards'
+                        : 'Add Cards',
+                  ),
+                ),
+              ),
             ),
           ),
         ],

@@ -4,6 +4,7 @@ import '../data/card_repository.dart';
 import '../data/saved_sets_repository.dart';
 import '../models/dominion_card.dart';
 import '../models/saved_set.dart';
+import '../widgets/card_info_dialog.dart';
 
 class RandomizerPage extends StatefulWidget {
   final CardRepository repository;
@@ -294,85 +295,91 @@ class _RandomizerPageState extends State<RandomizerPage> {
                             .colorScheme
                             .primaryContainer
                         : null,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  card.name,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () {
+                        showCardInfoDialog(context, card);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    card.name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
 
-                                const SizedBox(height: 4),
+                                  const SizedBox(height: 4),
 
-                                Text(
-                                  card.types.join(' • '),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall,
-                                ),
+                                  Text(
+                                    card.types.join(' • '),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall,
+                                  ),
 
-                                const SizedBox(height: 3),
+                                  const SizedBox(height: 3),
 
-                                Text(
-                                  card.set,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: Colors.grey.shade600,
-                                      ),
-                                ),
-                              ],
+                                  Text(
+                                    card.set,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Colors.grey.shade600,
+                                        ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
 
-                          Text(
-                            card.cost.toString(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
+                            Text(
+                              card.cost.toString(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(width: 8),
+                            const SizedBox(width: 8),
 
-                          IconButton(
-                            tooltip: 'Reroll card',
-                            icon: const Icon(Icons.refresh),
-                            onPressed: lockedCardIds.contains(card.id)
-                                ? null
-                                : () => rerollCard(index),
-                          ),
-
-                          IconButton(
-                            tooltip: lockedCardIds.contains(card.id)
-                                ? 'Unlock'
-                                : 'Lock',
-                            icon: Icon(
-                              lockedCardIds.contains(card.id)
-                                  ? Icons.lock
-                                  : Icons.lock_open,
+                            IconButton(
+                              tooltip: 'Reroll card',
+                              icon: const Icon(Icons.refresh),
+                              onPressed: lockedCardIds.contains(card.id)
+                                  ? null
+                                  : () => rerollCard(index),
                             ),
-                            onPressed: () {
-                              setState(() {
-                                if (lockedCardIds.contains(card.id)) {
-                                  lockedCardIds.remove(card.id);
-                                } else {
-                                  lockedCardIds.add(card.id);
-                                }
-                              });
-                            },
-                          ),
-                        ],
+
+                            IconButton(
+                              tooltip: lockedCardIds.contains(card.id)
+                                  ? 'Unlock'
+                                  : 'Lock',
+                              icon: Icon(
+                                lockedCardIds.contains(card.id)
+                                    ? Icons.lock
+                                    : Icons.lock_open,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  if (lockedCardIds.contains(card.id)) {
+                                    lockedCardIds.remove(card.id);
+                                  } else {
+                                    lockedCardIds.add(card.id);
+                                  }
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
