@@ -32,6 +32,8 @@ class _SavedSetsPageState extends State<SavedSetsPage> {
   Future<void> loadSets() async {
     final sets = await repository.loadSets();
 
+    if (!mounted) return;
+
     setState(() {
       savedSets = sets;
       loading = false;
@@ -166,26 +168,37 @@ class _SavedSetsPageState extends State<SavedSetsPage> {
                           });
                         },
 
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              tooltip: 'Rename',
-                              onPressed: () {
-                                renameSet(set);
-                              },
-                            ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'rename') {
+                              renameSet(set);
+                            }
 
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              tooltip: 'Delete',
-                              onPressed: () {
-                                deleteSet(set);
-                              },
+                            if (value == 'delete') {
+                              deleteSet(set);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'rename',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined),
+                                  SizedBox(width: 12),
+                                  Text('Rename'),
+                                ],
+                              ),
                             ),
-
-                            const Icon(Icons.chevron_right),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline),
+                                  SizedBox(width: 12),
+                                  Text('Delete'),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),

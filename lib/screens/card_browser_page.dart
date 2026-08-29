@@ -142,12 +142,12 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
       return;
     }
 
-  await chooseCardToReplace(
-    newCard: card,
-    set: set,
-    allSets: allSets,
-    repository: repository,
-  );
+    await chooseCardToReplace(
+      newCard: card,
+      set: set,
+      allSets: allSets,
+      repository: repository,
+    );
 }
 
   Future<void> chooseCardToReplace({
@@ -204,19 +204,19 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
   @override
   Widget build(BuildContext context) {
     final filteredCards = widget.cards.where((card) {
-    final search = searchText.toLowerCase();
+      final search = searchText.toLowerCase();
 
-    return card.name.toLowerCase().contains(search) ||
-        card.set.toLowerCase().contains(search) ||
-        card.types.any(
-          (type) => type.toLowerCase().contains(search),
-        );
-  }).toList();
+      return card.name.toLowerCase().contains(search) ||
+          card.set.toLowerCase().contains(search) ||
+          card.types.any(
+            (type) => type.toLowerCase().contains(search),
+          );
+    }).toList();
 
-  sortCards(
-    filteredCards,
-    selectedSort,
-  );
+    sortCards(
+      filteredCards,
+      selectedSort,
+    );
 
     return Scaffold(
       appBar: AppBar(
