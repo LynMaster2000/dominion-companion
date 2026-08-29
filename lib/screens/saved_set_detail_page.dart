@@ -5,6 +5,7 @@ import '../models/saved_set.dart';
 import '../data/saved_sets_repository.dart';
 import '../models/card_sort.dart';
 import 'card_browser_page.dart';
+import '../widgets/card_info_dialog.dart';
 
 class SavedSetDetailPage extends StatefulWidget {
   final SavedSet savedSet;
@@ -318,93 +319,99 @@ class _SavedSetDetailPageState
                       final card = kingdomCards[index];
 
                       return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                card.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () {
+                            showCardInfoDialog(context, card);
+                          },
+                            child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  card.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
 
-                              const SizedBox(height: 4),
+                                const SizedBox(height: 4),
 
-                              Text(
-                                card.types.join(' • '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
+                                Text(
+                                  card.types.join(' • '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
 
-                              const Spacer(),
+                                const Spacer(),
 
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      card.set,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                  ),
-                                  Text(
-                                    card.cost.toString(),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 4),
-
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                Row(
                                   children: [
-                                    IconButton(
-                                      tooltip: 'Replace card',
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 32,
-                                        minHeight: 32,
+                                    Expanded(
+                                      child: Text(
+                                        card.set,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodySmall,
                                       ),
-                                      icon: const Icon(
-                                        Icons.swap_horiz,
-                                        size: 18,
-                                      ),
-                                      onPressed: () {
-                                        replaceCard(card);
-                                      },
                                     ),
-                                    IconButton(
-                                      tooltip: 'Remove card',
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 32,
-                                        minHeight: 32,
+                                    Text(
+                                      card.cost.toString(),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      icon: const Icon(
-                                        Icons.close,
-                                        size: 18,
-                                      ),
-                                      onPressed: () {
-                                        removeCard(card);
-                                      },
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
+
+                                const SizedBox(height: 4),
+
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Replace card',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 32,
+                                          minHeight: 32,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.swap_horiz,
+                                          size: 18,
+                                        ),
+                                        onPressed: () {
+                                          replaceCard(card);
+                                        },
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Remove card',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 32,
+                                          minHeight: 32,
+                                        ),
+                                        icon: const Icon(
+                                          Icons.close,
+                                          size: 18,
+                                        ),
+                                        onPressed: () {
+                                          removeCard(card);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        )
                       );
                     },
                   ),
@@ -427,6 +434,9 @@ class _SavedSetDetailPageState
                   ...extraCards.map(
                     (card) => Card(
                       child: ListTile(
+                        onTap: () {
+                          showCardInfoDialog(context, card);
+                        },
                         title: Text(card.name),
                         subtitle: Text(
                           '${card.types.join(' • ')}\n${card.set}',
