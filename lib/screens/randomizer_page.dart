@@ -5,6 +5,8 @@ import '../data/saved_sets_repository.dart';
 import '../models/dominion_card.dart';
 import '../models/saved_set.dart';
 import '../widgets/card_info_dialog.dart';
+import '../data/kingdom_piles.dart';
+import '../widgets/kingdom_pile_dialog.dart';
 
 class RandomizerPage extends StatefulWidget {
   final CardRepository repository;
@@ -29,6 +31,12 @@ class _RandomizerPageState extends State<RandomizerPage> {
     final selectedCards = widget.cards
         .where((card) => selectedExpansions.contains(card.set))
         .where((card) => card.purpose == 'Kingdom Pile')
+        .where((card) {
+          final pile = getKingdomPileForCard(card.id);
+
+          return pile == null ||
+              card.id == pile.representativeCardId;
+        })
         .toList();
 
     final lockedCards = kingdom
@@ -56,6 +64,7 @@ class _RandomizerPageState extends State<RandomizerPage> {
         ...lockedCards,
         ...newCards,
       ];
+
       lockedCardIds.removeWhere(
         (id) => !kingdom.any((card) => card.id == id),
       );
@@ -70,12 +79,28 @@ class _RandomizerPageState extends State<RandomizerPage> {
         .toSet();
 
     final availableCards = widget.cards
-        .where(
-          (card) =>
-              selectedExpansions.contains(card.set) &&
-              card.purpose == 'Kingdom Pile' &&
-              !usedCardIds.contains(card.id),
-        )
+        .where((card) {
+          if (!selectedExpansions.contains(card.set)) {
+            return false;
+          }
+
+          if (card.purpose != 'Kingdom Pile') {
+            return false;
+          }
+
+          if (usedCardIds.contains(card.id)) {
+            return false;
+          }
+
+          final pile = getKingdomPileForCard(card.id);
+
+          if (pile != null &&
+              card.id != pile.representativeCardId) {
+            return false;
+          }
+
+          return true;
+        })
         .toList();
 
     if (availableCards.isEmpty) {
@@ -298,7 +323,22 @@ class _RandomizerPageState extends State<RandomizerPage> {
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
                       onTap: () {
-                        showCardInfoDialog(context, card);
+                        final pile = getKingdomPileForCard(card.id);
+
+                        if (pile != null &&
+                            card.id == pile.representativeCardId) {
+                          showKingdomPileDialog(
+                            context,
+                            pileCard: card,
+                            allCards: widget.cards,
+                          );
+                          return;
+                        }
+
+                        showCardInfoDialog(
+                          context,
+                          card,
+                        );
                       },
                       child: Padding(
                         padding: const EdgeInsets.all(12),

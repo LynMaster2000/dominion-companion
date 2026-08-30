@@ -6,6 +6,10 @@ import '../data/saved_sets_repository.dart';
 import '../models/card_sort.dart';
 import 'card_browser_page.dart';
 import '../widgets/card_info_dialog.dart';
+import '../data/extra_sync.dart';
+import '../data/card_dependencies.dart';
+import '../widgets/kingdom_pile_dialog.dart';
+import '../data/kingdom_piles.dart';
 
 class SavedSetDetailPage extends StatefulWidget {
   final SavedSet savedSet;
@@ -62,9 +66,55 @@ class _SavedSetDetailPageState
     setState(() {});
   }
 
+  Future<void> chooseKingdomCard() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CardBrowserPage(
+          cards: widget.allCards,
+          targetSet: widget.savedSet,
+          returnAfterSelection: true,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
   Future<void> removeCard(DominionCard card) async {
     setState(() {
       widget.savedSet.kingdomCardIds.remove(card.id);
+      syncRequiredExtras(
+        widget.savedSet,
+        widget.allCards,
+      );
+    });
+
+    final repository = SavedSetRepository();
+    final sets = await repository.loadSets();
+
+    final index = sets.indexWhere(
+      (set) => set.id == widget.savedSet.id,
+    );
+
+    if (index != -1) {
+      sets[index] = widget.savedSet;
+      await repository.saveSets(sets);
+    }
+  }
+
+  Future<void> removeExtra(DominionCard card) async {
+    setState(() {
+      widget.savedSet.extras.removeWhere(
+        (extra) => extra.cardId == card.id,
+      );
+
+      syncRequiredExtras(
+        widget.savedSet,
+        widget.allCards,
+      );
     });
 
     final repository = SavedSetRepository();
@@ -136,6 +186,209 @@ class _SavedSetDetailPageState
     }
   }
 
+  List<Widget> buildRequiredSetupItems(
+    Set<String> requiredSetupItems, {
+    bool groupSpiritCards = false,
+  }) {
+    final widgets = <Widget>[];
+    final handledItems = <String>{};
+
+    if (requiredSetupItems.contains('Boons')) {
+      final children = <String>[];
+
+      if (requiredSetupItems.contains('Will-o\'-Wisp pile')) {
+        if (!groupSpiritCards) {
+          children.add('Will-o\'-Wisp');
+        }
+
+        handledItems.add('Will-o\'-Wisp pile');
+      }
+
+      if (children.isEmpty) {
+        // No children to show, so Boons is just a normal required item.
+        widgets.add(
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.inventory_2_outlined),
+              title: Text('Boons'),
+              subtitle: Text('Required for this setup'),
+              trailing: Text('Required'),
+            ),
+          ),
+        );
+      } else {
+        // There are children, so Boons can be expanded.
+        widgets.add(
+          Card(
+            child: ExpansionTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: const Text('Boons'),
+              subtitle: const Text('Required for this setup'),
+              trailing: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Required'),
+                  SizedBox(width: 6),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 18,
+                  ),
+                ],
+              ),
+              children: [
+                for (final child in children)
+                  Builder(
+                    builder: (context) {
+                      DominionCard? childCard;
+
+                      for (final card in widget.allCards) {
+                        if (card.name == child) {
+                          childCard = card;
+                          break;
+                        }
+                      }
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.only(
+                          left: 56,
+                          right: 16,
+                        ),
+                        leading: const Icon(
+                          Icons.subdirectory_arrow_right,
+                          size: 18,
+                        ),
+                        title: Text(child),
+                        trailing: childCard != null
+                            ? const Icon(
+                                Icons.info_outline,
+                                size: 18,
+                              )
+                            : null,
+                        onTap: childCard == null
+                            ? null
+                            : () {
+                                showCardInfoDialog(
+                                  context,
+                                  childCard!,
+                                );
+                              },
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      handledItems.add('Boons');
+    }
+
+    // Doom setup
+    if (requiredSetupItems.contains('Hexes')) {
+      final children = <String>[];
+
+      if (requiredSetupItems.contains('Deluded / Envious')) {
+        children.add('Deluded');
+        children.add('Envious');
+        handledItems.add('Deluded / Envious');
+      }
+
+      if (requiredSetupItems.contains(
+        'Miserable / Twice Miserable',
+      )) {
+        children.add('Miserable');
+        children.add('Twice Miserable');
+        handledItems.add('Miserable / Twice Miserable');
+      }
+
+      widgets.add(
+        Card(
+          child: ExpansionTile(
+            leading: const Icon(Icons.inventory_2_outlined),
+            title: const Text('Hexes'),
+            subtitle: const Text('Required for this setup'),
+            trailing: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Required'),
+                SizedBox(width: 6),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 18,
+                ),
+              ],
+            ),
+            children: [
+              for (final child in children)
+                Builder(
+                  builder: (context) {
+                    DominionCard? childCard;
+
+                    for (final card in widget.allCards) {
+                      if (card.name == child) {
+                        childCard = card;
+                        break;
+                      }
+                    }
+
+                    return ListTile(
+                      contentPadding: const EdgeInsets.only(
+                        left: 56,
+                        right: 16,
+                      ),
+                      leading: const Icon(
+                        Icons.subdirectory_arrow_right,
+                        size: 18,
+                      ),
+                      title: Text(child),
+                      trailing: childCard != null
+                          ? const Icon(
+                              Icons.info_outline,
+                              size: 18,
+                            )
+                          : null,
+                      onTap: childCard == null
+                          ? null
+                          : () {
+                              showCardInfoDialog(
+                                context,
+                                childCard!,
+                              );
+                            },
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+
+      handledItems.add('Hexes');
+    }
+
+    // Everything that isn't part of a group,
+    // e.g. Ruins pile.
+    for (final setupItem in requiredSetupItems) {
+      if (handledItems.contains(setupItem)) {
+        continue;
+      }
+
+      widgets.add(
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.inventory_2_outlined),
+            title: Text(setupItem),
+            subtitle: const Text('Required for this setup'),
+            trailing: const Text('Required'),
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     final kingdomCards = widget.savedSet.kingdomCardIds
@@ -154,10 +407,50 @@ class _SavedSetDetailPageState
       )
       .toList();
 
+    final automaticSpiritCards = extraCards.where((card) {
+      final savedExtra = widget.savedSet.extras.firstWhere(
+        (extra) => extra.cardId == card.id,
+      );
+
+      return savedExtra.isAutomatic &&
+          card.types.contains('Spirit');
+    }).toList();
+
+    final groupSpiritCards = automaticSpiritCards.length > 1;
+
+    final automaticZombieCards = extraCards.where((card) {
+      final savedExtra = widget.savedSet.extras.firstWhere(
+        (extra) => extra.cardId == card.id,
+      );
+
+      return savedExtra.isAutomatic &&
+          card.types.contains('Zombie');
+    }).toList();
+
+    final groupZombieCards = automaticZombieCards.length > 1;
+
     sortCards(
       kingdomCards,
       selectedSort,
     );
+
+    final missingRequiredTypes = getMissingRequiredTypes(
+      widget.savedSet,
+      widget.allCards,
+    );
+
+    final dependencySourceIds = <String>{
+      ...widget.savedSet.kingdomCardIds,
+      ...widget.savedSet.extras.map((extra) => extra.cardId),
+    };
+
+    final dependencyRequirements = getDependencyRequirements(
+      dependencySourceIds,
+      widget.allCards,
+    );
+
+    final requiredSetupItems =
+        dependencyRequirements.setupItems;
 
     return Scaffold(
       appBar: AppBar(
@@ -286,7 +579,7 @@ class _SavedSetDetailPageState
                               .withValues(alpha: 0.45),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
-                            onTap: openCardBrowser,
+                            onTap: chooseKingdomCard,
                             child: Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -322,7 +615,22 @@ class _SavedSetDetailPageState
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
                           onTap: () {
-                            showCardInfoDialog(context, card);
+                            final pile = getKingdomPileForCard(card.id);
+
+                            if (pile != null &&
+                                card.id == pile.representativeCardId) {
+                              showKingdomPileDialog(
+                                context,
+                                pileCard: card,
+                                allCards: widget.allCards,
+                              );
+                              return;
+                            }
+
+                            showCardInfoDialog(
+                              context,
+                              card,
+                            );
                           },
                             child: Padding(
                             padding: const EdgeInsets.all(10),
@@ -416,7 +724,9 @@ class _SavedSetDetailPageState
                     },
                   ),
 
-                if (extraCards.isNotEmpty) ...[
+                if (extraCards.isNotEmpty ||
+                  missingRequiredTypes.isNotEmpty ||
+                  requiredSetupItems.isNotEmpty) ...[
                   const SizedBox(height: 24),
 
                   Text(
@@ -431,19 +741,176 @@ class _SavedSetDetailPageState
 
                   const SizedBox(height: 8),
 
-                  ...extraCards.map(
-                    (card) => Card(
-                      child: ListTile(
-                        onTap: () {
-                          showCardInfoDialog(context, card);
-                        },
-                        title: Text(card.name),
-                        subtitle: Text(
-                          '${card.types.join(' • ')}\n${card.set}',
+                  ...buildRequiredSetupItems(
+                    requiredSetupItems,
+                    groupSpiritCards: groupSpiritCards,
+                  ),
+
+                  if (groupSpiritCards)
+                    Card(
+                      child: ExpansionTile(
+                        leading: const Icon(Icons.inventory_2_outlined),
+                        title: const Text('Spirits pile'),
+                        subtitle: const Text('Required for this setup'),
+                        trailing: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Required'),
+                            SizedBox(width: 6),
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 18,
+                            ),
+                          ],
                         ),
-                        trailing: Text(card.cost.toString()),
+                        children: [
+                          for (final spiritCard in automaticSpiritCards)
+                            ListTile(
+                              contentPadding: const EdgeInsets.only(
+                                left: 56,
+                                right: 16,
+                              ),
+                              leading: const Icon(
+                                Icons.subdirectory_arrow_right,
+                                size: 18,
+                              ),
+                              title: Text(spiritCard.name),
+                              trailing: const Icon(
+                                Icons.info_outline,
+                                size: 18,
+                              ),
+                              onTap: () {
+                                showCardInfoDialog(
+                                  context,
+                                  spiritCard,
+                                );
+                              },
+                            ),
+                        ],
                       ),
                     ),
+
+                  if (groupZombieCards)
+                    Card(
+                      child: ExpansionTile(
+                        leading: const Icon(Icons.inventory_2_outlined),
+                        title: const Text('Zombies'),
+                        subtitle: const Text('Required for this setup'),
+                        trailing: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Required'),
+                            SizedBox(width: 6),
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 18,
+                            ),
+                          ],
+                        ),
+                        children: [
+                          for (final zombieCard in automaticZombieCards)
+                            ListTile(
+                              contentPadding: const EdgeInsets.only(
+                                left: 56,
+                                right: 16,
+                              ),
+                              leading: const Icon(
+                                Icons.subdirectory_arrow_right,
+                                size: 18,
+                              ),
+                              title: Text(zombieCard.name),
+                              trailing: const Icon(
+                                Icons.info_outline,
+                                size: 18,
+                              ),
+                              onTap: () {
+                                showCardInfoDialog(
+                                  context,
+                                  zombieCard,
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+
+                  ...missingRequiredTypes.map(
+                    (requiredType) => Card(
+                      elevation: 0,
+                      child: ListTile(
+                        leading: const Icon(Icons.add_circle_outline),
+                        title: Text('Choose $requiredType card'),
+                        subtitle: const Text('Required for this setup'),
+                        onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CardBrowserPage(
+                              cards: widget.allCards,
+                              targetSet: widget.savedSet,
+                              requiredTypeFilter: requiredType,
+                              returnAfterSelection: true,
+                            ),
+                          ),
+                        );
+
+                        if (!mounted) return;
+
+                        setState(() {});
+                        },
+                      ),
+                    ),
+                  ),
+
+                  ...extraCards
+                      .where(
+                        (card) =>
+                            (!groupSpiritCards ||
+                                !automaticSpiritCards.contains(card)) &&
+                            (!groupZombieCards ||
+                                !automaticZombieCards.contains(card)),
+                      )
+                      .map(
+                    (card) {
+                      final savedExtra = widget.savedSet.extras.firstWhere(
+                        (extra) => extra.cardId == card.id,
+                      );
+
+                      return Card(
+                        child: ListTile(
+                          onTap: () {
+                            showCardInfoDialog(context, card);
+                          },
+                          title: Text(card.name),
+                          subtitle: Text(
+                            '${card.types.join(' • ')}\n${card.set}',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (savedExtra.isAutomatic)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 8),
+                                  child: Text('Required'),
+                                ),
+
+                              Text(card.cost.toString()),
+
+                              if (!savedExtra.isAutomatic) ...[
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  tooltip: 'Remove extra',
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () {
+                                    removeExtra(card);
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ],

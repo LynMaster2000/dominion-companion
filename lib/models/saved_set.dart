@@ -1,16 +1,19 @@
 class SavedExtra {
   final String cardId;
   final String? targetCardId;
+  final bool isAutomatic;
 
   SavedExtra({
     required this.cardId,
     this.targetCardId,
+    this.isAutomatic = false,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'cardId': cardId,
       'targetCardId': targetCardId,
+      'isAutomatic': isAutomatic,
     };
   }
 
@@ -18,6 +21,7 @@ class SavedExtra {
     return SavedExtra(
       cardId: json['cardId'] as String,
       targetCardId: json['targetCardId'] as String?,
+      isAutomatic: json['isAutomatic'] as bool? ?? false,
     );
   }
 }

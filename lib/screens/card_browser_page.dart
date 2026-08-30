@@ -5,17 +5,24 @@ import '../data/saved_sets_repository.dart';
 import '../models/saved_set.dart';
 import '../models/card_sort.dart';
 import '../widgets/card_info_dialog.dart';
+import '../data/extra_sync.dart';
+import '../data/kingdom_piles.dart';
+import '../widgets/kingdom_pile_dialog.dart';
 
 class CardBrowserPage extends StatefulWidget {
   final List<DominionCard> cards;
   final SavedSet? targetSet;
   final String? replaceCardId;
+  final String? requiredTypeFilter;
+  final bool returnAfterSelection;
 
   const CardBrowserPage({
     super.key,
     required this.cards,
     this.targetSet,
     this.replaceCardId,
+    this.requiredTypeFilter,
+    this.returnAfterSelection = false,
   });
 
   @override
@@ -28,6 +35,15 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
   String? selectedExpansion;
   String? selectedType;
   int? selectedCost;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.requiredTypeFilter != null) {
+      selectedType = widget.requiredTypeFilter;
+    }
+  }
   
   Future<void> addCardToSavedSet(DominionCard card) async {
     final repository = SavedSetRepository();
@@ -72,8 +88,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
         }
 
         targetSet.kingdomCardIds[replaceIndex] = card.id;
+        syncRequiredExtras(
+          targetSet,
+          widget.cards,
+        );
 
         await repository.saveSets(savedSets);
+
+        if (widget.returnAfterSelection && mounted) {
+          Navigator.pop(context, true);
+          return;
+        }
 
         if (!mounted) return;
 
@@ -170,7 +195,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
         ),
       );
 
+      syncRequiredExtras(
+        set,
+        widget.cards,
+      );
+
       await repository.saveSets(allSets);
+
+      if (widget.returnAfterSelection && mounted) {
+        Navigator.pop(context, true);
+        return;
+      }
 
       if (!mounted) return;
 
@@ -211,8 +246,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
 
     if (set.kingdomCardIds.length < 10) {
       set.kingdomCardIds.add(card.id);
+      syncRequiredExtras(
+        set,
+        widget.cards,
+      );
 
       await repository.saveSets(allSets);
+
+      if (widget.returnAfterSelection && mounted) {
+        Navigator.pop(context, true);
+        return;
+      }
 
       if (!mounted) return;
 
@@ -277,7 +321,17 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
 
     set.kingdomCardIds[index] = newCard.id;
 
+      syncRequiredExtras(
+        set,
+        widget.cards,
+      );
+
     await repository.saveSets(allSets);
+
+    if (widget.returnAfterSelection && mounted) {
+      Navigator.pop(context, true);
+      return;
+    }
 
     if (!mounted) return;
 
@@ -315,6 +369,14 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
       ..sort();
       
     final filteredCards = widget.cards.where((card) {
+      final pile = getKingdomPileForCard(card.id);
+
+      // For rotating piles, only show the actual aggregate pile card
+      // such as Augurs, Clashes, Forts, etc.
+      if (pile != null &&
+          card.id != pile.representativeCardId) {
+        return false;
+      }
       final search = searchText.toLowerCase();
 
       final matchesSearch =
@@ -328,9 +390,12 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
           selectedExpansion == null ||
           card.set == selectedExpansion;
 
+      final effectiveType =
+          widget.requiredTypeFilter ?? selectedType;
+
       final matchesType =
-          selectedType == null ||
-          card.types.contains(selectedType);
+          effectiveType == null ||
+          card.types.contains(effectiveType);
 
       final matchesCost =
           selectedCost == null ||
@@ -418,11 +483,13 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
                         ),
                       ),
                     ],
-                    onChanged: (value) {
-                      setState(() {
-                        selectedType = value;
-                      });
-                    },
+                    onChanged: widget.requiredTypeFilter != null
+                      ? null
+                      : (value) {
+                          setState(() {
+                            selectedType = value;
+                          });
+                        },
                   ),
 
                   const SizedBox(width: 16),
@@ -502,7 +569,22 @@ class _CardBrowserPageState extends State<CardBrowserPage> {
                   return Card(
                     child: ListTile(
                       onTap: () {
-                        showCardInfoDialog(context, card);
+                        final pile = getKingdomPileForCard(card.id);
+
+                        if (pile != null &&
+                            card.id == pile.representativeCardId) {
+                          showKingdomPileDialog(
+                            context,
+                            pileCard: card,
+                            allCards: widget.cards,
+                          );
+                          return;
+                        }
+
+                        showCardInfoDialog(
+                          context,
+                          card,
+                        );
                       },
                       title: Text(card.name),
                       subtitle: Text(
