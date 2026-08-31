@@ -4,12 +4,18 @@ import 'data/card_repository.dart';
 import 'models/dominion_card.dart';
 import 'screens/randomizer_page.dart';
 import 'screens/main_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final repository = CardRepository();
   final cards = await repository.loadAllCards();
+
+  await Supabase.initialize(
+    url: 'https://fdhxbdmmmpchuwcuktgm.supabase.co',
+    publishableKey: 'sb_publishable_gy7AXrSvVsMc6Whb9RWKPQ_3hcDfW4n',
+  );
 
   runApp(
     DominionApp(
@@ -87,3 +93,4 @@ class DominionApp extends StatelessWidget {
     );
   }
 }
+

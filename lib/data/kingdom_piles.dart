@@ -80,6 +80,46 @@ const List<KingdomPileDefinition> kingdomPileDefinitions = [
       'Allies::Lich',
     ],
   ),
+  KingdomPileDefinition(
+    name: 'Catapult/Rocks',
+    representativeCardId: 'Empires::Catapult/Rocks',
+    cardIds: [
+      'Empires::Catapult',
+      'Empires::Rocks',
+    ],
+  ),
+  KingdomPileDefinition(
+    name: 'Encampment/Plunder',
+    representativeCardId: 'Empires::Encampment/Plunder',
+    cardIds: [
+      'Empires::Encampment',
+      'Empires::Plunder',
+    ],
+  ),
+  KingdomPileDefinition(
+    name: 'Gladiator/Fortune',
+    representativeCardId: 'Empires::Gladiator/Fortune',
+    cardIds: [
+      'Empires::Gladiator',
+      'Empires::Fortune',
+    ],
+  ),
+  KingdomPileDefinition(
+    name: 'Patrician/Emporium',
+    representativeCardId: 'Empires::Patrician/Emporium',
+    cardIds: [
+      'Empires::Patrician',
+      'Empires::Emporium',
+    ],
+  ),
+  KingdomPileDefinition(
+    name: 'Settlers/Bustling Village',
+    representativeCardId: 'Empires::Settlers/Bustling Village',
+    cardIds: [
+      'Empires::Settlers',
+      'Empires::Bustling Village',
+    ],
+  ),
 ];
 
 KingdomPileDefinition? getKingdomPileForCard(

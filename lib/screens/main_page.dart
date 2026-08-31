@@ -5,6 +5,8 @@ import '../models/dominion_card.dart';
 import 'randomizer_page.dart';
 import 'card_browser_page.dart';
 import 'saved_sets_page.dart';
+import 'recommended_sets_page.dart';
+import 'community_page.dart';
 
 class MainPage extends StatefulWidget {
   final CardRepository repository;
@@ -53,6 +55,12 @@ class _MainPageState extends State<MainPage> {
               );
             },
           ),
+
+          RecommendedSetsPage(
+            cards: widget.cards,
+          ),
+
+          const CommunityPage(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -90,6 +98,16 @@ class _MainPageState extends State<MainPage> {
             icon: Icon(Icons.bookmarks_outlined),
             selectedIcon: Icon(Icons.bookmarks),
             label: 'Saved Sets',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Official',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.public_outlined),
+            selectedIcon: Icon(Icons.public),
+            label: 'Community',
           ),
         ],
       ),
