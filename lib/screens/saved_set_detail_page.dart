@@ -10,6 +10,8 @@ import '../data/extra_sync.dart';
 import '../data/card_dependencies.dart';
 import '../widgets/kingdom_pile_dialog.dart';
 import '../data/kingdom_piles.dart';
+import '../widgets/publish_set_dialog.dart';
+import '../data/community_sets_repository.dart';
 
 class SavedSetDetailPage extends StatefulWidget {
   final SavedSet savedSet;
@@ -48,6 +50,52 @@ class _SavedSetDetailPageState
     if (replaced == true) {
       setState(() {});
     }
+  }
+
+  Future<void> publishSet() async {
+    if (widget.savedSet.kingdomCardIds.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'A set must contain exactly 10 Kingdom cards before publishing.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final alreadyPublished =
+        await CommunitySetsRepository()
+            .hasAlreadyPublished(
+              widget.savedSet,
+            );
+
+    if (!mounted) return;
+
+    if (alreadyPublished) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You have already published this set.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final published = await showPublishSetDialog(
+      context,
+      savedSet: widget.savedSet,
+      allCards: widget.allCards,
+    );
+
+    if (!mounted || !published) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Set published successfully.'),
+      ),
+    );
   }
 
   Future<void> openCardBrowser() async {
@@ -456,6 +504,11 @@ class _SavedSetDetailPageState
       appBar: AppBar(
         title: Text(widget.savedSet.name),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.public),
+            tooltip: 'Publish set',
+            onPressed: publishSet,
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: 'Rename set',

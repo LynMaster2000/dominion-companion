@@ -17,6 +17,20 @@ Future<void> main() async {
     publishableKey: 'sb_publishable_gy7AXrSvVsMc6Whb9RWKPQ_3hcDfW4n',
   );
 
+  final supabase = Supabase.instance.client;
+
+  if (supabase.auth.currentSession == null) {
+    await supabase.auth.signInAnonymously();
+  }
+
+  debugPrint(
+    'Supabase user: ${supabase.auth.currentUser?.id}',
+  );
+
+  debugPrint(
+    'Anonymous: ${supabase.auth.currentUser?.isAnonymous}',
+  );
+
   runApp(
     DominionApp(
       repository: repository,

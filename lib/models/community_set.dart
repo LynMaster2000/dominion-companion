@@ -1,16 +1,28 @@
+import 'saved_set.dart';
+
 class CommunitySet {
   final String id;
   final String name;
   final List<String> kingdomCardIds;
-  final List<String> extraCardIds;
+  final List<SavedExtra> extras;
+  final List<String> expansions;
+  final List<String> tags;
+  final String? description;
+  final String authorId;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   const CommunitySet({
     required this.id,
     required this.name,
     required this.kingdomCardIds,
-    required this.extraCardIds,
+    required this.extras,
+    required this.expansions,
+    required this.tags,
+    required this.description,
+    required this.authorId,
     required this.createdAt,
+    required this.updatedAt,
   });
 
   factory CommunitySet.fromJson(Map<String, dynamic> json) {
@@ -20,11 +32,26 @@ class CommunitySet {
       kingdomCardIds: List<String>.from(
         json['kingdom_card_ids'] ?? [],
       ),
-      extraCardIds: List<String>.from(
-        json['extra_card_ids'] ?? [],
+      extras: (json['extras'] as List<dynamic>? ?? [])
+          .map(
+            (extra) => SavedExtra.fromJson(
+              extra as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      expansions: List<String>.from(
+        json['expansions'] ?? [],
       ),
+      tags: List<String>.from(
+        json['tags'] ?? [],
+      ),
+      description: json['description'] as String?,
+      authorId: json['author_id'] as String,
       createdAt: DateTime.parse(
         json['created_at'] as String,
+      ),
+      updatedAt: DateTime.parse(
+        json['updated_at'] as String,
       ),
     );
   }

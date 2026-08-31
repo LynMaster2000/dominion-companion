@@ -60,7 +60,9 @@ class _MainPageState extends State<MainPage> {
             cards: widget.cards,
           ),
 
-          const CommunityPage(),
+          CommunityPage(
+            cards: widget.cards,
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
