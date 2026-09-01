@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/community_set.dart';
 import '../models/dominion_card.dart';
 import '../models/saved_set.dart';
+import '../models/community_filter.dart';
 
 class CommunitySetAlreadyPublishedException implements Exception {
   const CommunitySetAlreadyPublishedException();
@@ -20,16 +21,88 @@ class CommunitySetsRepository {
     SupabaseClient? client,
   }) : _client = client ?? Supabase.instance.client;
 
-  Future<List<CommunitySet>> getCommunitySets() async {
-    final response = await _client
-        .from('community_sets')
-        .select()
-        .order('created_at', ascending: false);
+  Future<List<CommunitySet>> getCommunitySets(
+    CommunityFilter filter,
+  ) async {
+    var baseQuery = _client
+        .from('community_sets_with_ratings')
+        .select();
+
+    if (filter.expansions.isNotEmpty) {
+      baseQuery = baseQuery.contains(
+        'expansions',
+        filter.expansions.toList(),
+      );
+    }
+
+    if (filter.tags.isNotEmpty) {
+      baseQuery = baseQuery.contains(
+        'tags',
+        filter.tags.toList(),
+      );
+    }
+
+    late final List<dynamic> response;
+
+    switch (filter.sort) {
+      case CommunitySort.newest:
+        response = await baseQuery.order(
+          'created_at',
+          ascending: false,
+        );
+        break;
+
+      case CommunitySort.oldest:
+        response = await baseQuery.order(
+          'created_at',
+          ascending: true,
+        );
+        break;
+
+      case CommunitySort.alphabetical:
+        response = await baseQuery.order(
+          'name',
+          ascending: true,
+        );
+        break;
+
+      case CommunitySort.highestRated:
+        response = await baseQuery
+            .order(
+              'average_rating',
+              ascending: false,
+            )
+            .order(
+              'rating_count',
+              ascending: false,
+            )
+            .order(
+              'created_at',
+              ascending: false,
+            );
+        break;
+
+      case CommunitySort.mostRated:
+        response = await baseQuery
+            .order(
+              'rating_count',
+              ascending: false,
+            )
+            .order(
+              'average_rating',
+              ascending: false,
+            )
+            .order(
+              'created_at',
+              ascending: false,
+            );
+        break;
+    }
 
     return response
         .map(
           (json) => CommunitySet.fromJson(
-            json,
+            json as Map<String, dynamic>,
           ),
         )
         .toList();
