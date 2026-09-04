@@ -13,6 +13,7 @@ class CommunitySet {
   final DateTime updatedAt;
   final double averageRating;
   final int ratingCount;
+  final int favoriteCount;
 
   const CommunitySet({
     required this.id,
@@ -27,6 +28,7 @@ class CommunitySet {
     required this.updatedAt,
     this.averageRating = 0,
     this.ratingCount = 0,
+    this.favoriteCount = 0,
   });
 
   factory CommunitySet.fromJson(Map<String, dynamic> json) {
@@ -61,6 +63,7 @@ class CommunitySet {
           (json['average_rating'] as num?)?.toDouble() ?? 0,
       ratingCount:
           (json['rating_count'] as num?)?.toInt() ?? 0,
+      favoriteCount: (json['favorite_count'] as num?)?.toInt() ?? 0,
     );
   }
 }

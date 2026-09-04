@@ -108,6 +108,42 @@ class CommunitySetsRepository {
         .toList();
   }
 
+  Future<void> deletePublishedSet(String setId) async {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user == null) {
+      throw Exception('You must be signed in to delete a published set.');
+    }
+
+    await Supabase.instance.client
+        .from('community_sets')
+        .delete()
+        .eq('id', setId)
+        .eq('author_id', user.id);
+  }
+
+  Future<List<CommunitySet>> getMyPublishedSets() async {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user == null) {
+      return [];
+    }
+
+    final rows = await Supabase.instance.client
+        .from('community_sets_with_ratings')
+        .select()
+        .eq('author_id', user.id)
+        .order('created_at', ascending: false);
+
+    return rows
+        .map(
+          (row) => CommunitySet.fromJson(
+            Map<String, dynamic>.from(row),
+          ),
+        )
+        .toList();
+  }
+
   Future<bool> hasAlreadyPublished(
     SavedSet savedSet,
   ) async {

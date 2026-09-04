@@ -1,69 +1,38 @@
 import 'package:flutter/material.dart';
 
-import '../data/community_sets_repository.dart';
+import '../data/set_favorites_repository.dart';
 import '../models/community_set.dart';
 import '../models/dominion_card.dart';
 import 'community_set_detail_page.dart';
-import '../models/community_filter.dart';
-import '../widgets/community_filter_dialog.dart';
-import '../data/community_tags.dart';
 import 'profile_page.dart';
 
-class CommunityPage extends StatefulWidget {
+class FavoritesPage extends StatefulWidget {
   final List<DominionCard> cards;
 
-  const CommunityPage({
+  const FavoritesPage({
     super.key,
     required this.cards,
   });
 
   @override
-  State<CommunityPage> createState() => CommunityPageState();
+  State<FavoritesPage> createState() => FavoritesPageState();
 }
 
-class CommunityPageState extends State<CommunityPage> {
-  final CommunitySetsRepository _repository =
-      CommunitySetsRepository();
+class FavoritesPageState extends State<FavoritesPage> {
+  final SetFavoritesRepository _repository =
+      SetFavoritesRepository();
 
   late Future<List<CommunitySet>> _setsFuture;
-  CommunityFilter _filter = const CommunityFilter();
-
-  Future<void> _openFilterDialog() async {
-    final availableExpansions = widget.cards
-        .map((card) => card.set)
-        .toSet()
-        .toList()
-      ..sort();
-
-    final result =
-        await showDialog<CommunityFilter>(
-      context: context,
-      builder: (context) {
-        return CommunityFilterDialog(
-          filter: _filter,
-          availableExpansions: availableExpansions,
-          availableTags: communityTags,
-        );
-      },
-    );
-
-    if (result == null) return;
-
-    setState(() {
-      _filter = result;
-      _setsFuture = _repository.getCommunitySets(_filter);
-    });
-  }
 
   @override
   void initState() {
     super.initState();
-    _setsFuture = _repository.getCommunitySets(_filter);
+    _setsFuture = _repository.getFavoriteSets();
   }
 
   Future<void> refresh() async {
     setState(() {
-      _setsFuture = _repository.getCommunitySets(_filter);
+      _setsFuture = _repository.getFavoriteSets();
     });
 
     await _setsFuture;
@@ -73,16 +42,8 @@ class CommunityPageState extends State<CommunityPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Community'),
+        title: const Text('Favorites'),
         actions: [
-          IconButton(
-            tooltip: 'Filter and sort',
-            onPressed: _openFilterDialog,
-            icon: Badge(
-              isLabelVisible: _filter.hasActiveFilters,
-              child: const Icon(Icons.filter_list),
-            ),
-          ),
           IconButton(
             icon: const Icon(Icons.person_outline),
             tooltip: 'Profile',
@@ -114,7 +75,7 @@ class CommunityPageState extends State<CommunityPage> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Could not load community sets.\n\n'
+                  'Could not load favorites.\n\n'
                   '${snapshot.error}',
                   textAlign: TextAlign.center,
                 ),
@@ -127,7 +88,7 @@ class CommunityPageState extends State<CommunityPage> {
           if (sets.isEmpty) {
             return const Center(
               child: Text(
-                'No community sets yet.',
+                'No favorites yet.',
               ),
             );
           }
@@ -144,7 +105,8 @@ class CommunityPageState extends State<CommunityPage> {
                   child: ListTile(
                     title: Text(set.name),
                     subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         if (set.expansions.isNotEmpty)
                           Text(
@@ -153,7 +115,8 @@ class CommunityPageState extends State<CommunityPage> {
 
                         if (set.tags.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 6),
+                            padding:
+                                const EdgeInsets.only(top: 6),
                             child: Wrap(
                               spacing: 6,
                               runSpacing: 4,
@@ -164,14 +127,16 @@ class CommunityPageState extends State<CommunityPage> {
                                     visualDensity:
                                         VisualDensity.compact,
                                     materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
+                                        MaterialTapTargetSize
+                                            .shrinkWrap,
                                   ),
                               ],
                             ),
                           ),
 
                         Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                          padding:
+                              const EdgeInsets.only(top: 6),
                           child: Row(
                             children: [
                               const Icon(
@@ -179,7 +144,6 @@ class CommunityPageState extends State<CommunityPage> {
                                 size: 16,
                               ),
                               const SizedBox(width: 4),
-
                               Text(
                                 set.ratingCount == 0
                                     ? 'No ratings'

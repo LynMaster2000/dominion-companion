@@ -4,6 +4,7 @@ import '../data/saved_sets_repository.dart';
 import '../models/saved_set.dart';
 import '../models/dominion_card.dart';
 import 'saved_set_detail_page.dart';
+import 'profile_page.dart';
 
 class SavedSetsPage extends StatefulWidget {
   final List<DominionCard> cards;
@@ -200,6 +201,22 @@ class SavedSetsPageState extends State<SavedSetsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Saved Sets'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfilePage(
+                    cards: widget.cards,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: createNewSet,

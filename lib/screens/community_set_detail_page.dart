@@ -8,7 +8,7 @@ import '../widgets/card_info_dialog.dart';
 import '../widgets/kingdom_pile_dialog.dart';
 import '../data/kingdom_piles.dart';
 import '../data/card_dependencies.dart';
-import '../data/saved_sets_repository.dart';
+import '../data/set_favorites_repository.dart';
 import '../data/set_ratings_repository.dart';
 
 class CommunitySetDetailPage extends StatefulWidget {
@@ -32,7 +32,15 @@ class _CommunitySetDetailPageState
   final SetRatingsRepository _ratingsRepository =
       SetRatingsRepository();
 
+  final SetFavoritesRepository _favoritesRepository =
+    SetFavoritesRepository();
+
   late Future<SetRatingSummary> _ratingFuture;
+  late Future<bool> _favoriteFuture;
+
+  late int _favoriteCount;
+  bool _favoriteBusy = false;
+
 
   @override
   void initState() {
@@ -41,6 +49,14 @@ class _CommunitySetDetailPageState
     _ratingFuture = _ratingsRepository.getRatingSummary(
       widget.communitySet.id,
     );
+
+    _favoriteFuture = _favoritesRepository.isFavorited(
+      widget.communitySet.id,
+    );
+
+    _favoriteCount = widget.communitySet.favoriteCount;
+
+    refreshFavoriteCount();
   }
 
   void refreshRating() {
@@ -77,113 +93,53 @@ class _CommunitySetDetailPageState
     return displaySet;
   }
 
-  bool _sameStringLists(
-    List<String> a,
-    List<String> b,
-  ) {
-    if (a.length != b.length) {
-      return false;
-    }
+  Future<void> toggleFavorite(bool currentlyFavorited) async {
+    if (_favoriteBusy) return;
 
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) {
-        return false;
-      }
-    }
+    _favoriteBusy = true;
 
-    return true;
-  }
+    final newValue = !currentlyFavorited;
 
-  Future<void> saveToMySets(BuildContext context) async {
-    final repository = SavedSetRepository();
+    try {
+      await _favoritesRepository.setFavorited(
+        widget.communitySet.id,
+        newValue,
+      );
 
-    final savedSets = await repository.loadSets();
+      if (!mounted) return;
 
-    final communityKingdomIds =
-        List<String>.from(widget.communitySet.kingdomCardIds)..sort();
+      setState(() {
+        _favoriteFuture = Future.value(newValue);
 
-    final communityManualExtraIds = widget.communitySet.extras
-        .map(
-          (extra) =>
-              '${extra.cardId}|${extra.targetCardId ?? ''}',
-        )
-        .toList()
-      ..sort();
-
-    final alreadySaved = savedSets.any((savedSet) {
-      final savedKingdomIds =
-          List<String>.from(savedSet.kingdomCardIds)..sort();
-
-      final savedManualExtraIds = savedSet.extras
-          .where((extra) => !extra.isAutomatic)
-          .map(
-            (extra) =>
-                '${extra.cardId}|${extra.targetCardId ?? ''}',
-          )
-          .toList()
-        ..sort();
-
-      return _sameStringLists(
-            communityKingdomIds,
-            savedKingdomIds,
-          ) &&
-          _sameStringLists(
-            communityManualExtraIds,
-            savedManualExtraIds,
-          );
-    });
-
-    if (alreadySaved) {
-      if (!context.mounted) return;
+        if (newValue) {
+          _favoriteCount++;
+        } else if (_favoriteCount > 0) {
+          _favoriteCount--;
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'This set is already saved.',
-          ),
+          content: Text('Could not update favorite.'),
         ),
       );
-
-      return;
+    } finally {
+      _favoriteBusy = false;
     }
+  }
 
-    final newSet = SavedSet(
-      id: DateTime.now()
-          .microsecondsSinceEpoch
-          .toString(),
-      name: widget.communitySet.name,
-      kingdomCardIds: List<String>.from(
-        widget.communitySet.kingdomCardIds,
-      ),
-      extras: widget.communitySet.extras
-          .map(
-            (extra) => SavedExtra(
-              cardId: extra.cardId,
-              targetCardId: extra.targetCardId,
-              isAutomatic: false,
-            ),
-          )
-          .toList(),
+  Future<void> refreshFavoriteCount() async {
+    final count = await _favoritesRepository.getFavoriteCount(
+      widget.communitySet.id,
     );
 
-    syncRequiredExtras(
-      newSet,
-      widget.allCards,
-    );
+    if (!mounted) return;
 
-    savedSets.add(newSet);
-
-    await repository.saveSets(savedSets);
-
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '"${widget.communitySet.name}" saved to My Sets.',
-        ),
-      ),
-    );
+    setState(() {
+      _favoriteCount = count;
+    });
   }
 
   DominionCard? findCard(String cardId) {
@@ -468,13 +424,27 @@ class _CommunitySetDetailPageState
       appBar: AppBar(
         title: Text(widget.communitySet.name),
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.bookmark_add_outlined,
-            ),
-            tooltip: 'Save to My Sets',
-            onPressed: () {
-              saveToMySets(context);
+          FutureBuilder<bool>(
+            future: _favoriteFuture,
+            builder: (context, snapshot) {
+              final isFavorited = snapshot.data ?? false;
+
+              return IconButton(
+                icon: Icon(
+                  isFavorited
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                ),
+                tooltip: isFavorited
+                    ? 'Remove from Favorites'
+                    : 'Add to Favorites',
+                onPressed: snapshot.connectionState ==
+                        ConnectionState.waiting
+                    ? null
+                    : () {
+                        toggleFavorite(isFavorited);
+                      },
+              );
             },
           ),
         ],
@@ -578,6 +548,23 @@ class _CommunitySetDetailPageState
                 ),
               );
             },
+          ),
+
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.favorite,
+                  size: 20,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '$_favoriteCount favorite${_favoriteCount == 1 ? '' : 's'}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
           ),
 
           Text(

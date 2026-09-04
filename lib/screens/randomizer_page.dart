@@ -7,6 +7,8 @@ import '../models/saved_set.dart';
 import '../widgets/card_info_dialog.dart';
 import '../data/kingdom_piles.dart';
 import '../widgets/kingdom_pile_dialog.dart';
+import 'recommended_sets_page.dart';
+import 'profile_page.dart';
 
 class RandomizerPage extends StatefulWidget {
   final CardRepository repository;
@@ -185,6 +187,17 @@ class _RandomizerPageState extends State<RandomizerPage> {
     print('Saved set: ${newSet.name}');
   }
 
+  void openOfficialSets() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecommendedSetsPage(
+          cards: widget.cards,
+        ),
+      ),
+    );
+  }
+
   void openExpansionSelector() {
     final expansions = widget.cards
         .map((card) => card.set)
@@ -285,6 +298,20 @@ class _RandomizerPageState extends State<RandomizerPage> {
                 ? () => saveKingdom(context)
                 : null,
           ),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Profile',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfilePage(
+                    cards: widget.cards,
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: Padding(
@@ -301,6 +328,17 @@ class _RandomizerPageState extends State<RandomizerPage> {
                       ? 'Select Expansions'
                       : '${selectedExpansions.length} expansions selected',
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: openOfficialSets,
+                icon: const Icon(Icons.menu_book_outlined),
+                label: const Text('Official Sets'),
               ),
             ),
 
